@@ -1,17 +1,19 @@
-package com.inteliense.databean.connectors;
+package com.inteliense.aloft.server.db.internal.connectors;
 
 import com.inteliense.aloft.server.db.internal.supporting.*;
+import com.inteliense.aloft.server.db.internal.supporting.sql.Field;
+import com.inteliense.aloft.server.db.internal.supporting.sql.SQLBuilder;
 import com.inteliense.aloft.utils.exceptions.types.CriticalException;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.*;
 
 public class MysqlConnection extends DbConnection implements ExecutesQueries  {
 
     private Connection conn = null;
-    private String db = "";
+
+    public MysqlConnection(String username, String password) {
+        super(username, password);
+    }
 
     @Override
     public Object getConn() {
@@ -27,10 +29,8 @@ public class MysqlConnection extends DbConnection implements ExecutesQueries  {
     protected void connect() throws Exception, CriticalException {
 
         String jdbc = "jdbc:mysql://localhost:3306/" + db;
-        String user = "root";
-        String password = "secret";
 
-        conn = DriverManager.getConnection(jdbc, user, password);
+        conn = DriverManager.getConnection(jdbc, username, password);
         if(conn == null) throw new CriticalException("Failed to connect to mysql.");
 
     }
@@ -55,8 +55,11 @@ public class MysqlConnection extends DbConnection implements ExecutesQueries  {
             SQLBuilder builder = new SQLBuilder(p);
             String preparedSql = builder.getPreparedString();
             PreparedStatement stmt = conn.prepareStatement(preparedSql);
-            for(int i=0;i< builder.preparedSize(); i++) {
-                SQLBuilder.set(stmt, i + 1, builder.next());
+            for(int i=0;i< builder.preparedSize() / 2; i++) {
+                Object v = builder.next();
+                if(v.getClass() == Field.class) v = ((Field) v).get();
+                if(v == null) break;
+                SQLBuilder.set(stmt, i + 1, v);
             }
             ResultSet resultSet = stmt.executeQuery();
             return new QueryResults(resultSet, p.selectColumns());
@@ -74,11 +77,15 @@ public class MysqlConnection extends DbConnection implements ExecutesQueries  {
             SQLBuilder builder = new SQLBuilder(p);
             String preparedSql = builder.getPreparedString();
             PreparedStatement stmt = conn.prepareStatement(preparedSql);
-            for(int i=0;i< builder.preparedSize(); i++) {
-                SQLBuilder.set(stmt, i + 1, builder.next());
+            for(int i=0;i< builder.preparedSize() / 2; i++) {
+                Object v = builder.next();
+                if(v.getClass() == Field.class) v = ((Field) v).get();
+                if(v == null) break;
+                SQLBuilder.set(stmt, i + 1, v);
             }
             stmt.executeUpdate();
         } catch (Exception e) {
+            e.printStackTrace();
             onError(new CriticalException("Failed to execute query.", e));
         }
 

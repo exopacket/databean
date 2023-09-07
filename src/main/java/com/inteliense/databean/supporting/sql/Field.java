@@ -1,16 +1,18 @@
-package com.inteliense.databean.supporting;
+package com.inteliense.aloft.server.db.internal.supporting.sql;
+
+import com.inteliense.aloft.server.db.internal.supporting.sql.Column;
 
 public class Field {
 
-    private String column;
+    private Column column;
     private Object value;
 
-    public Field(String column, Object value) {
+    public Field(Column column, Object value) {
         this.column = column;
         this.value = value;
     }
 
-    public String column() {
+    public Column column() {
         return column;
     }
 

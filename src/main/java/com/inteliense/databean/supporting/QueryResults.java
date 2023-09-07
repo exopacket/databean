@@ -1,5 +1,8 @@
-package com.inteliense.databean.supporting;
+package com.inteliense.aloft.server.db.internal.supporting;
 
+import com.inteliense.aloft.server.db.internal.supporting.sql.Column;
+import com.inteliense.aloft.server.db.internal.supporting.sql.Field;
+import com.inteliense.aloft.server.db.internal.supporting.sql.Record;
 import com.inteliense.aloft.utils.exceptions.types.CriticalException;
 
 import java.sql.ResultSet;
@@ -14,8 +17,8 @@ public class QueryResults {
             while(rs.next()) {
                 ArrayList<Field> fields = new ArrayList<Field>();
                 for(int i=0; i<select.size(); i++) {
-                    String col = select.get(i).column();
-                    fields.add(new Field(col, rs.getObject(col)));
+                    Column col = select.get(i).column();
+                    fields.add(new Field(col, rs.getObject(col.full())));
                 }
                 records.add(new Record(fields));
             }

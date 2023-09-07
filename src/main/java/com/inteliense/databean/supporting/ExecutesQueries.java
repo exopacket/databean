@@ -1,4 +1,7 @@
-package com.inteliense.databean.supporting;
+package com.inteliense.aloft.server.db.internal.supporting;
+
+import com.inteliense.aloft.server.db.internal.supporting.QueryParams;
+import com.inteliense.aloft.server.db.internal.supporting.QueryResults;
 
 public interface ExecutesQueries {
 

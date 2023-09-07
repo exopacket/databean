@@ -1,4 +1,4 @@
-package com.inteliense.databean.supporting;
+package com.inteliense.aloft.server.db.internal.supporting.sql;
 
 import com.inteliense.aloft.utils.exceptions.types.CommonException;
 
@@ -12,7 +12,8 @@ public enum Operator {
     TRUE,
     FALSE,
     NULL,
-    NOT_NULL;
+    NOT_NULL,
+    SOFT_DELETED;
 
     public static Operator parse(Object o) throws CommonException {
         if(o == null) return Operator.NULL;

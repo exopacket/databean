@@ -1,22 +1,28 @@
-package com.inteliense.databean;
+package com.inteliense.aloft.server.db.internal;
 
 import com.inteliense.aloft.server.db.internal.supporting.DbDriver;
 import com.inteliense.aloft.server.db.internal.supporting.DbType;
 import com.inteliense.aloft.server.db.internal.supporting.Query;
+import com.inteliense.aloft.utils.exceptions.types.CommonException;
 import com.inteliense.aloft.utils.exceptions.types.CriticalException;
+import com.inteliense.aloft.utils.exceptions.types.ReportedException;
 
 public class Db {
 
     private DbDriver driver;
-    private String database;
+    private String database = null;
 
-    public Db(DbType type) {
-        this.driver = new DbDriver(type);
+    public Db(DbType type, String username, String password) {
+        this.driver = new DbDriver(type, username, password);
     }
 
-    public Db(String database, DbType type) {
-        this.driver = new DbDriver(type);
-        this.database = dbName(database);
+    public Db(DbType type, String username, String password, String database) {
+        this.driver = new DbDriver(type, username, password);
+        try {
+            setDatabase(database);
+        } catch (CriticalException | Exception e) {
+            new ReportedException("Failed to set db table.", e);
+        }
     }
 
     public void setDatabase(String database) throws CriticalException, Exception {
@@ -25,6 +31,7 @@ public class Db {
     }
 
     public Query query() {
+        if(database == null) return null;
         return this.driver.buildQuery(dbName(database));
     }
 

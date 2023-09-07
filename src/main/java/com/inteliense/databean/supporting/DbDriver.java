@@ -1,8 +1,9 @@
-package com.inteliense.databean.supporting;
+package com.inteliense.aloft.server.db.internal.supporting;
 
 import com.inteliense.aloft.server.db.internal.connectors.MysqlConnection;
 import com.inteliense.aloft.server.db.internal.connectors.RedisConnection;
 import com.inteliense.aloft.server.db.internal.connectors.SqliteConnection;
+import com.inteliense.aloft.server.db.internal.supporting.redis.RedisAdapter;
 
 public class DbDriver {
 
@@ -10,11 +11,11 @@ public class DbDriver {
 
     private DbConnection connection;
 
-    public DbDriver(DbType type) {
+    public DbDriver(DbType type, String username, String password) {
         this.type = type;
-        if(type == DbType.REDIS) this.connection = new RedisConnection();
-        else if(type == DbType.MYSQL) this.connection = new MysqlConnection();
-        else if(type == DbType.SQLITE) this.connection = new SqliteConnection();
+        if(type == DbType.REDIS) this.connection = new RedisConnection(username, password);
+        else if(type == DbType.MYSQL) this.connection = new MysqlConnection(username, password);
+        else if(type == DbType.SQLITE) this.connection = new SqliteConnection(username, password);
     }
 
     public DbConnection conn() {

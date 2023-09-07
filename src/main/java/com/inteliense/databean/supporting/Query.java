@@ -1,4 +1,6 @@
-package com.inteliense.databean.supporting;
+package com.inteliense.aloft.server.db.internal.supporting;
+
+import com.inteliense.aloft.server.db.internal.supporting.sql.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,12 +10,21 @@ public class Query {
 
     private String database;
     private String table;
-    private boolean all = false;
+
     private ArrayList<Field> select = new ArrayList<Field>();
     private ArrayList<Field> update = new ArrayList<Field>();
     private ArrayList<Field> insert = new ArrayList<Field>();
     private ArrayList<Condition> where = new ArrayList<Condition>();
-    private QueryTypes type;
+    private ArrayList<Join> join = new ArrayList<Join>();
+
+    private boolean all = false;
+    private boolean delete = false;
+    private boolean softDelete = false;
+
+    private Column orderByColumn;
+    private OrderBy orderByDirection;
+
+    private Column groupByColumn;
 
     private DbConnection connection;
 
@@ -48,22 +59,18 @@ public class Query {
 //    }
 
     public Query select() {
-        type = QueryTypes.SELECT;
         all = true;
         return this;
     }
 
     public Query select(String... columns) {
-        type = QueryTypes.SELECT;
         for(String column: columns) {
-            select.add(new Field(column, null));
+            select.add(new Field(makeColumn(column), null));
         }
         return this;
     }
 
     public Query insert(HashMap<String, Object> toInsert) {
-
-        type = QueryTypes.INSERT;
 
         for(String key : toInsert.keySet()) {
             Object value = toInsert.get(key);
@@ -74,16 +81,13 @@ public class Query {
     }
 
     public Query insert(String column, Object value) {
-        type = QueryTypes.INSERT;
 
-        Field field = new Field(column, value);
+        Field field = new Field(makeColumn(column), value);
         insert.add(field);
         return this;
     }
 
     public Query update(HashMap<String, Object> toUpdate) {
-
-        type = QueryTypes.UPDATE;
 
         for(String key : toUpdate.keySet()) {
             Object value = toUpdate.get(key);
@@ -94,11 +98,35 @@ public class Query {
     }
 
     public Query update(String column, Object value) {
-        type = QueryTypes.UPDATE;
 
-        Field field = new Field(column, value);
+        Field field = new Field(makeColumn(column), value);
         update.add(field);
         return this;
+    }
+
+    public Query addJoin(Join join) {
+        this.join.add(join);
+        return this;
+    }
+
+    public Join join(JoinTypes type) {
+        return new Join(this, type);
+    }
+
+    public Join join(JoinTypes type, Column left, Object operator, Column right) {
+        return new Join(this, left, operator, right, type);
+    }
+
+    public Join join(JoinTypes type, Object left, Object operator, Object right) {
+        return new Join(this, left, operator, right, type);
+    }
+
+    public SQLFunction func(String name, Object... args) {
+        return SQLFunction.create(name, args);
+    }
+
+    public SQLFunction func(String name, String storeAs, Object... args) {
+        return SQLFunction.createWithStoreAs(name, storeAs, args);
     }
 
     public Query where(ArrayList<Condition> conditions) {
@@ -116,8 +144,105 @@ public class Query {
         return this;
     }
 
+    public Query orWhere(ArrayList<Condition> conditions) {
+        for(Condition condition : conditions) {
+            condition.or();
+        }
+        this.where.addAll(conditions);
+        return this;
+    }
+
+    public Query orWhere(Condition[] conditions) {
+        for(Condition condition : conditions) {
+            condition.or();
+        }
+        this.where.addAll(Arrays.asList(conditions));
+        return this;
+    }
+
+    public Query orWhere(Condition value) {
+        value.or();
+        where.add(value);
+        return this;
+    }
+
+    public Query whereNull(String column) {
+        Column col = makeColumn(column);
+        Condition c = new Condition(col, null);
+        where.add(c);
+        return this;
+    }
+
+    public Query orWhereNull(String column) {
+        Column col = makeColumn(column);
+        Condition c = new Condition(col, null);
+        c.or();
+        where.add(c);
+        return this;
+    }
+
+    public Query whereSet(String column) {
+        Column col = makeColumn(column);
+        Condition c = new Condition(col, Operator.NOT_NULL);
+        where.add(c);
+        return this;
+    }
+
+    public Query orWhereSet(String column) {
+        Column col = makeColumn(column);
+        Condition c = new Condition(col, Operator.NOT_NULL);
+        c.or();
+        where.add(c);
+        return this;
+    }
+
+    public Query whereDeleted(String column) {
+        Column col = makeColumn(column);
+        Condition c = new Condition(col, Operator.SOFT_DELETED);
+        where.add(c);
+        return this;
+    }
+
+    public Query orWhereDeleted(String column) {
+        Column col = makeColumn(column);
+        Condition c = new Condition(col, Operator.SOFT_DELETED);
+        c.or();
+        where.add(c);
+        return this;
+    }
+
+    public Query whereLike() {
+        return null;
+    }
+
+    public Query orWhereLike() {
+        return null;
+    }
+
+    public Query orderBy() {
+        return null;
+    }
+
+    public Query groupBy() {
+        return null;
+    }
+
+    public Query beginGroup() {
+        where.add(Condition.GROUP_BEGIN());
+        return this;
+    }
+
+    public Query closeGroup() {
+        where.add(Condition.GROUP_END());
+        return this;
+    }
+
     public void delete() {
-        type = QueryTypes.DELETE;
+        this.delete = true;
+        run();
+    }
+
+    public void softDelete() {
         run();
     }
 
@@ -131,16 +256,42 @@ public class Query {
         qa.q(this);
     }
 
+    private String stripColumnChars(String input) {
+        return input.replaceAll("[`'\"]", "");
+    }
+
+    private Column makeColumn(String table, String column) {
+        table = stripColumnChars(table);
+        column = stripColumnChars(column);
+        return new Column(table, column);
+    }
+
+    private Column makeColumn(String input) {
+        if(input.contains(".")) {
+            String[] split = input.split("\\.");
+            if(split.length == 2) return makeColumn(split[0], split[1]);
+            else return null;
+        } else {
+            input = stripColumnChars(input);
+            return new Column(table, input);
+        }
+    }
+
     public QueryParams p() {
         QueryParams params = new QueryParams(
                 database,
                 table,
                 all,
+                delete,
+                softDelete,
+                orderByColumn,
+                orderByDirection,
+                groupByColumn,
                 select,
                 update,
                 insert,
                 where,
-                type
+                join
         );
         return params;
     }

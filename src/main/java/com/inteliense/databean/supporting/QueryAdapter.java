@@ -1,4 +1,4 @@
-package com.inteliense.databean.supporting;
+package com.inteliense.aloft.server.db.internal.supporting;
 
 public class QueryAdapter {
 
